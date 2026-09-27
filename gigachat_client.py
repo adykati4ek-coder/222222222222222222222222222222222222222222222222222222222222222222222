@@ -44,6 +44,19 @@ class GigaChatClient:
         return self._token
 
     def chat(self, system, user_text, temperature=0.8):
+        try:
+            return self._chat_once(system, user_text, temperature)
+        except requests.HTTPError as exc:
+            if exc.response is not None and exc.response.status_code in (401, 403):
+                self._token = None
+                self._token_expires = 0
+                try:
+                    return self._chat_once(system, user_text, temperature)
+                except requests.HTTPError as exc2:
+                    raise exc2
+            raise exc
+
+    def _chat_once(self, system, user_text, temperature):
         token = self._get_token()
         headers = {
             "Authorization": f"Bearer {token}",
